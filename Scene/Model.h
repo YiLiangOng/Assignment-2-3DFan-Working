@@ -17,11 +17,11 @@ public:
     Model() {}
     virtual ~Model() {}
 
-    virtual void InitModel() = 0;          // called before the first frame
-    virtual void Render()    = 0;          // called once per frame
-    virtual void Resize(int w, int h) { (void)w; (void)h; }   // called whenever the surface/window resizes
+    virtual void InitModel() = 0;
+    virtual void Render()    = 0;
+    virtual void Resize(int w, int h) { (void)w; (void)h; }
 
-    // Touch / mouse event interface (screen pixels, origin top-left).
+    // Touch / mouse event interface
     virtual void TouchEventDown(float x, float y)    { (void)x; (void)y; }
     virtual void TouchEventMove(float x, float y)    { (void)x; (void)y; }
     virtual void TouchEventRelease(float x, float y) { (void)x; (void)y; }

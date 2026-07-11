@@ -1,13 +1,11 @@
 #pragma once
-
 /**
  * Renderer.h
  *
  * Singleton controller for the rendering pipeline.
  *
  * Manages a collection of Model pointers. Initializes, resizes, and
- * renders all shapes in the scene, and fans touch/mouse events out to
- * every registered model (Chapter 2 tutorial 4 pattern).
+ * renders all shapes in the scene.
  *
  * On Android, holds the AAssetManager* received from the Java layer
  * and passes it to models during construction for file loading.
@@ -36,7 +34,7 @@ public:
     void resize(int w, int h);
     void render();
 
-    // Touch / mouse delegation -- forwarded to every registered model.
+    // Touch / mouse delegation
     void TouchEventDown(float x, float y);
     void TouchEventMove(float x, float y);
     void TouchEventRelease(float x, float y);

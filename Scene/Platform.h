@@ -3,14 +3,7 @@
 /**
  * Platform.h
  *
- * Single-header platform detection for the GLPI Framework Intro demo.
- * Supports three targets:
- *   PLATFORM_EMSCRIPTEN  – WebGL 2.0 via Emscripten + SDL2
- *   PLATFORM_WINDOWS     – OpenGL (ES compat) via GLFW + GLEW
- *   PLATFORM_ANDROID     – OpenGL ES 3.0 via Android NDK
- *
- * IMPORTANT: Emscripten must be detected BEFORE Windows because emcc
- * defines both __EMSCRIPTEN__ AND _WIN32 on some toolchain setups.
+ * Platform detection and OpenGL header includes for WebGL, Windows, Android, and iOS.
  */
 
 #ifdef __EMSCRIPTEN__

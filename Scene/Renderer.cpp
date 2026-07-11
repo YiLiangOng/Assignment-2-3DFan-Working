@@ -1,11 +1,10 @@
+
 /**
  * Renderer.cpp
  *
  * Implementation of the Renderer singleton. This is the only .cpp file in
- * the project permitted to #include concrete shape headers -- Renderer.h
- * itself only ever speaks Model*.
- *
- * Assignment 2: the scene contains exactly one model, the Fan.
+ * the project permitted to #include concrete shape headers (Triangle.h,
+ * Square.h) -- Renderer.h itself only ever speaks Model*.
  */
 
 #include "Renderer.h"
