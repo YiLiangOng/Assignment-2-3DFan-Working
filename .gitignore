@@ -1,0 +1,25 @@
+# --- Desktop (CMake) --------------------------------------------------
+build/
+build_desktop/
+CMakeCache.txt
+CMakeFiles/
+
+# --- WebGL (Emscripten) -------------------------------------------------
+web/
+.emscripten_deps/
+
+# --- Android / Gradle ----------------------------------------------------
+android/.gradle/
+android/.idea/
+android/app/build/
+android/app/.cxx/
+android/local.properties
+android/*.iml
+android/app/*.iml
+android/.kotlin/
+
+# --- Misc ------------------------------------------------------------------
+*.o
+*.obj
+.DS_Store
+Thumbs.db
