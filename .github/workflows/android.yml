@@ -29,7 +29,7 @@ jobs:
 
       - name: Install NDK and CMake
         run: |
-          sdkmanager "ndk;27.0.12077973" "cmake;3.22.1" --sdk_root="${ANDROID_HOME}"
+          yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager "ndk;27.0.12077973" "cmake;3.22.1" --sdk_root="${ANDROID_HOME}"
 
       # gradlew is not committed, so there is no wrapper script for
       # setup-gradle's `gradle-version: wrapper` mode to introspect — it
