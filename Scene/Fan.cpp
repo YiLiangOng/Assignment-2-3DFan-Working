@@ -133,12 +133,10 @@ void Fan::Render()
     if (fanOn) spinAngle += kBaseSpeed + dragBoost;
     if (spinAngle >= 360.0f) spinAngle -= 360.0f;
 
-    // Check if the mouse has stopped moving or left the window
-    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
-    float msSinceMove = std::chrono::duration<float, std::milli>(now - lastMoveTime).count();
-
-    // Decay the boost if the mouse was released OR if it hasn't moved recently
-    if ((!isDragging || msSinceMove > 100.0f) && dragBoost > 0.0f) {
+    // Stretch goal (fling with decay): once the finger/mouse is up, the
+    // boost is no longer refreshed by TouchEventMove, so wind it down
+    // gradually instead of the base spec's instant snap back to 0.
+    if (!isDragging && dragBoost > 0.0f) {
         dragBoost *= kDragDecay;
         if (dragBoost < 0.01f) dragBoost = 0.0f;
     }
@@ -164,7 +162,6 @@ void Fan::Render()
     // Pull the fan back into the scene and tilt it
     transform.TransformTranslate(0.0f, 0.8f, -8.0f);
     transform.TransformRotate(glm::radians(20.0f), 0.0f, 1.0f, 0.0f);
-    transform.TransformScale(0.6f, 0.6f, 0.6f);
 
     // --- Base ----
     transform.TransformPushMatrix();
