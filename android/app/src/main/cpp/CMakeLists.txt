@@ -63,7 +63,7 @@ find_library(android-lib android)
 find_library(glesv3-lib  GLESv3)
 find_library(egl-lib     EGL)
 
-target_link_libraries(fan3d
+target_link_libraries(fan3d PRIVATE
     ${log-lib}
     ${android-lib}
     ${glesv3-lib}
