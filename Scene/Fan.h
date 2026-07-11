@@ -41,6 +41,10 @@
 #include "Transform.h"
 #include <chrono>
 
+#ifdef PLATFORM_ANDROID
+#include <android/asset_manager.h>
+#endif
+
 class Fan : public Model {
 public:
 #ifdef PLATFORM_ANDROID

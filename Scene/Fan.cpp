@@ -205,8 +205,9 @@ void Fan::Render()
 
     // --- Hub -------------------------------------------------------------
     transform.TransformPushMatrix();
-        transform.TransformTranslate(0.0f, 0.2f, 0.0f);
-        transform.TransformScale(0.3f, 0.3f, 0.3f);
+        transform.TransformTranslate(0.0f, 0.2f, 0.15f);
+        transform.TransformRotate(glm::radians(spinAngle), 0.0f, 0.0f, 1.0f);
+        transform.TransformScale(0.22f, 0.22f, 0.08f);
         drawPart(hubColor);
     transform.TransformPopMatrix();
 
@@ -244,7 +245,7 @@ void Fan::TouchEventMove(float x, float y)
     const float dist = std::sqrt(dx * dx + dy * dy);   // pixels this event
     movedDistance += dist;
 
-    const auto  now  = std::chrono::steady_clock::now();
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
     float dtMs = std::chrono::duration<float, std::milli>(now - lastMoveTime).count();
     if (dtMs < 1.0f) dtMs = 1.0f;   // guard divide-by-~0 on back-to-back callbacks
 
