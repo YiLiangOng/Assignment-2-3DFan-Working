@@ -5,27 +5,27 @@
  *
  * Assignment 2 -- "3D Fan"
  *
- * Renders a hierarchical 3D table fan built from a single shared color cube.
- * Parts are positioned using a matrix stack and tinted via fragment uniforms.
+ * Renders a 3D table fan using a single shared 8-vertex cube.
+ * Parts are positioned using a hierarchical matrix stack (Transform.h) 
+ * and colored via the PARTCOLOR uniform.
  *
  * Part hierarchy:
- *              [B3]
+ *              [B3] (or 3-5 evenly spaced blades)
  *               |
- *      [B2]--(hub)--[B0]     Blades rotate around the hub's Z axis.
- *               |            The hub, pole, and base remain still.
+ *      [B2]--(hub)--[B0]
+ *               |
  *              [B1]
  *               |
  *              pole
  *               |
  *          ___base___
  *
- * Gestures & Stretch Goals:
- *   - TAP: Toggles the fan ON/OFF.
- *   - SWIPE/DRAG: Temporarily boosts spin speed based on swipe velocity.
- *   - FLING DECAY: Upon release, the drag speed boost gradually winds down.
- *   - LONG PRESS: Holding a tap cycles the blade count (3, 4, or 5).
+ * Gestures:
+ *   - TAP: Toggles fan on/off.
+ *   - LONG PRESS: Cycles through 3, 4, and 5 blades.
+ *   - SWIPE/DRAG: Boosts spin speed based on drag velocity; the added speed
+ *     decays smoothly after release for a brief fling effect.
  */
-
 
 #include "Model.h"
 #include "Platform.h"
@@ -81,27 +81,19 @@ private:
     float spinAngle = 0.0f;
     bool  fanOn     = true;
     float dragBoost = 0.0f;
+    int   bladeCount = 4;
 
     static constexpr float kBaseSpeed    = 1.5f;   // deg/frame when ON
     static constexpr float kMaxBoost     = 20.0f;  // drag boost clamp
     static constexpr float kBoostScale   = 8.0f;   // px/ms -> deg/frame
     static constexpr float kTapThreshold = 12.0f;  // px threshold for tap vs swipe
+    static constexpr float kBoostDecay   = 0.98f;  // per-frame fling decay
+    static constexpr int   kMinBladeCount = 3;
+    static constexpr int   kMaxBladeCount = 5;
+    static constexpr long long kBladeCyclePressMs = 550;
 
     float lastX = 0.0f, lastY = 0.0f;
     float movedDistance = 0.0f;
     std::chrono::steady_clock::time_point lastMoveTime;
-
-    // --- Stretch goal: fling with decay -------------------------------
-    // True from TouchEventDown until TouchEventRelease; Render() only
-    // decays dragBoost while this is false, so a live drag is never
-    // fought by the decay.
-    bool isDragging = false;
-    static constexpr float kDragDecay = 0.98f;   // per-frame decay once released
-
-    // --- Stretch goal: blade count toggle (long press) ------------------
-    int bladeCount = 4;
-    static constexpr int   kMinBladeCount = 3;
-    static constexpr int   kMaxBladeCount = 5;
-    static constexpr float kLongPressMs   = 500.0f;   // hold time to count as a long press
     std::chrono::steady_clock::time_point touchDownTime;
 };

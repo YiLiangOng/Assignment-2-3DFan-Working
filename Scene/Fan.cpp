@@ -12,13 +12,7 @@
 
 namespace {
 
-// 8 unique unit-cube corners (front and back).
-//
-// The scene transforms below use unit-cube dimensions: for example, the
-// 0.25 base scale is its full height and the 2.53 pole scale is its full
-// height.  Keeping the cube in [-0.5, 0.5] therefore lets the pole finish
-// inside the base instead of extending through it, and preserves the intended
-// thin blade proportions.
+// 8 unique unit-cube corners (front and back)
 const GLfloat kPositions[8][3] = {
     {-0.5f,-0.5f, 0.5f}, {-0.5f, 0.5f, 0.5f},
     { 0.5f, 0.5f, 0.5f}, { 0.5f,-0.5f, 0.5f},  // front
@@ -110,6 +104,7 @@ void Fan::InitModel()
     transform.TransformLoadIdentity();
 
     lastMoveTime = std::chrono::steady_clock::now();
+    touchDownTime = lastMoveTime;
 }
 
 void Fan::Resize(int w, int h)
@@ -138,6 +133,11 @@ void Fan::Render()
     if (fanOn) spinAngle += kBaseSpeed + dragBoost;
     if (spinAngle >= 360.0f) spinAngle -= 360.0f;
 
+    // Bonus: preserve a swipe's momentum briefly after release, then coast
+    // back to the base speed instead of dropping instantly to it
+    dragBoost *= kBoostDecay;
+    if (dragBoost < 0.01f) dragBoost = 0.0f;
+
     glEnable(GL_DEPTH_TEST);
     glUseProgram(program);
     glBindVertexArray(vao);
@@ -145,11 +145,12 @@ void Fan::Render()
     static const glm::vec3 baseColor(0.45f, 0.28f, 0.12f);
     static const glm::vec3 poleColor(0.55f, 0.55f, 0.58f);
     static const glm::vec3 hubColor (0.20f, 0.20f, 0.22f);
-    static const glm::vec3 bladeColor[4] = {
+    static const glm::vec3 bladeColor[kMaxBladeCount] = {
         glm::vec3(0.85f, 0.10f, 0.10f),  // 0: red
         glm::vec3(0.15f, 0.35f, 0.85f),  // 1: blue
         glm::vec3(0.90f, 0.50f, 0.05f),  // 2: orange
         glm::vec3(0.15f, 0.70f, 0.20f),  // 3: green
+        glm::vec3(0.65f, 0.20f, 0.80f),  // 4: purple
     };
 
     transform.TransformSetMatrixMode(MODEL_MATRIX);
@@ -176,16 +177,16 @@ void Fan::Render()
     // --- Hub --
     transform.TransformPushMatrix();
         transform.TransformTranslate(0.0f, 0.2f, 0.15f);
-        transform.TransformRotate(glm::radians(spinAngle), 0.0f, 0.0f, 1.0f);
         transform.TransformScale(0.22f, 0.22f, 0.08f);
         drawPart(hubColor);
     transform.TransformPopMatrix();
 
-    // --- Four Blades (spaced 90 degrees apart) ---
-    for (int i = 0; i < 4; ++i) {
+    // --- 3-5 Blades (evenly spaced around the hub) ---
+    const float bladeSpacing = 360.0f / static_cast<float>(bladeCount);
+    for (int i = 0; i < bladeCount; ++i) {
         transform.TransformPushMatrix();
             transform.TransformTranslate(0.0f, 0.2f, 0.15f);
-            transform.TransformRotate(glm::radians(spinAngle + i * 90.0f), 0.0f, 0.0f, 1.0f);
+            transform.TransformRotate(glm::radians(spinAngle + i * bladeSpacing), 0.0f, 0.0f, 1.0f);
             transform.TransformTranslate(0.0f, 0.55f, 0.0f);
             transform.TransformScale(0.22f, 0.8f, 0.05f);
             drawPart(bladeColor[i]);
@@ -201,7 +202,8 @@ void Fan::TouchEventDown(float x, float y)
     lastX = x;
     lastY = y;
     movedDistance = 0.0f;
-    lastMoveTime = std::chrono::steady_clock::now();
+    touchDownTime = std::chrono::steady_clock::now();
+    lastMoveTime = touchDownTime;
 }
 
 void Fan::TouchEventMove(float x, float y)
@@ -225,9 +227,20 @@ void Fan::TouchEventMove(float x, float y)
 
 void Fan::TouchEventRelease(float /*x*/, float /*y*/)
 {
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    const long long pressMs = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - touchDownTime).count();
+
     if (movedDistance < kTapThreshold) {
-        fanOn = !fanOn;
-        LOGI("Fan %s", fanOn ? "ON" : "OFF");
+        if (pressMs >= kBladeCyclePressMs) {
+            bladeCount = (bladeCount == kMaxBladeCount)
+                ? kMinBladeCount
+                : bladeCount + 1;
+            LOGI("Blade count: %d", bladeCount);
+        } else {
+            fanOn = !fanOn;
+            LOGI("Fan %s", fanOn ? "ON" : "OFF");
+        }
     }
-    dragBoost = 0.0f;   // boost applies only while dragging
+    // Bonus: dragBoost is intentionally not cleared here so that the speed decays slowly instead
 }

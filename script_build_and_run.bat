@@ -29,7 +29,8 @@ IF %ERRORLEVEL% NEQ 0 ( echo Build failed. & pause & exit /b 1 )
 
 echo [3/3] Running ...
 echo.
-echo Controls: Click = toggle fan ON/OFF, Click-drag = spin faster, ESC = quit
+echo Controls: Click = toggle fan ON/OFF, hold = cycle 3/4/5 blades,
+echo           click-drag = spin faster with coast, ESC = quit
 echo.
 pushd build_desktop\Debug
 Fan3D.exe
