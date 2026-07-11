@@ -134,8 +134,7 @@ void Fan::Render()
     if (spinAngle >= 360.0f) spinAngle -= 360.0f;
 
     // Stretch goal (fling with decay): once the finger/mouse is up, the
-    // boost is no longer refreshed by TouchEventMove, so wind it down
-    // gradually instead of the base spec's instant snap back to 0.
+    // boost is no longer refreshed by TouchEventMove
     if (!isDragging && dragBoost > 0.0f) {
         dragBoost *= kDragDecay;
         if (dragBoost < 0.01f) dragBoost = 0.0f;
@@ -162,6 +161,9 @@ void Fan::Render()
     // Pull the fan back into the scene and tilt it
     transform.TransformTranslate(0.0f, 0.8f, -8.0f);
     transform.TransformRotate(glm::radians(20.0f), 0.0f, 1.0f, 0.0f);
+    
+    // Shrink the entire assembly to match the sample
+    transform.TransformScale(0.6f, 0.6f, 0.6f);
 
     // --- Base ----
     transform.TransformPushMatrix();
@@ -172,28 +174,33 @@ void Fan::Render()
 
     // --- Pole -------
     transform.TransformPushMatrix();
-        transform.TransformTranslate(0.0f, -1.21f, 0.0f);
-        transform.TransformScale(0.15f, 2.53f, 0.15f);
+        transform.TransformTranslate(0.0f, -1.1f, 0.0f);
+        transform.TransformScale(0.15f, 1.3f, 0.15f);
         drawPart(poleColor);
     transform.TransformPopMatrix();
 
-    // --- Hub --
+    // --- Hub (stays still -- only the blades below rotate) --
     transform.TransformPushMatrix();
         transform.TransformTranslate(0.0f, 0.2f, 0.0f);
-        transform.TransformScale(0.2f, 0.2f, 0.2f); 
+        transform.TransformScale(0.3f, 0.3f, 0.3f);
         drawPart(hubColor);
     transform.TransformPopMatrix();
 
-    // --- Blades, evenly spaced around the hub's Z axis (with bonus) -----------------
-    // bladeCount is 3, 4, or 5
-    // cycled by a long press in TouchEventRelease
+    // --- Blades, evenly spaced around the hub's Z axis -----------------
+    // Stretch goal (blade count toggle): bladeCount is 3, 4, or 5 --
+    // cycled by a long press in TouchEventRelease -- and the spacing
+    // below (360/bladeCount) re-derives itself every frame, so no extra
+    // geometry or shader work is needed to support the change.
     const float spacingDeg = 360.0f / static_cast<float>(bladeCount);
     for (int i = 0; i < bladeCount; ++i) {
         transform.TransformPushMatrix();
             transform.TransformTranslate(0.0f, 0.2f, 0.15f);
             transform.TransformRotate(glm::radians(spinAngle + i * spacingDeg), 0.0f, 0.0f, 1.0f);
-            transform.TransformTranslate(0.0f, 0.55f, 0.0f);
-            transform.TransformScale(0.22f, 0.8f, 0.05f);
+            
+            // Pushed further out (1.2f), made thinner (0.12f), and longer (1.1f)
+            transform.TransformTranslate(0.0f, 1.2f, 0.0f);
+            transform.TransformScale(0.12f, 1.1f, 0.05f);
+            
             drawPart(bladeColor[i]);
         transform.TransformPopMatrix();
     }

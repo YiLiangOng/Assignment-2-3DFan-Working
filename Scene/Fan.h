@@ -26,6 +26,7 @@
  *   - LONG PRESS: Holding a tap cycles the blade count (3, 4, or 5).
  */
 
+
 #include "Model.h"
 #include "Platform.h"
 #include "Transform.h"
@@ -90,11 +91,14 @@ private:
     float movedDistance = 0.0f;
     std::chrono::steady_clock::time_point lastMoveTime;
 
-    // --- Bonus: fling with decay -------------------------------
+    // --- Stretch goal: fling with decay -------------------------------
+    // True from TouchEventDown until TouchEventRelease; Render() only
+    // decays dragBoost while this is false, so a live drag is never
+    // fought by the decay.
     bool isDragging = false;
-    static constexpr float kDragDecay = 0.98f;   // per frame decay once released
+    static constexpr float kDragDecay = 0.98f;   // per-frame decay once released
 
-    // --- Bonus: blade count toggle (long press) ------------------
+    // --- Stretch goal: blade count toggle (long press) ------------------
     int bladeCount = 4;
     static constexpr int   kMinBladeCount = 3;
     static constexpr int   kMaxBladeCount = 5;
