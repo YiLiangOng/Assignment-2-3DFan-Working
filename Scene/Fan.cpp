@@ -161,9 +161,6 @@ void Fan::Render()
     // Pull the fan back into the scene and tilt it
     transform.TransformTranslate(0.0f, 0.8f, -8.0f);
     transform.TransformRotate(glm::radians(20.0f), 0.0f, 1.0f, 0.0f);
-    
-    // Shrink the entire assembly to match the sample
-    transform.TransformScale(0.6f, 0.6f, 0.6f);
 
     // --- Base ----
     transform.TransformPushMatrix();
@@ -174,8 +171,8 @@ void Fan::Render()
 
     // --- Pole -------
     transform.TransformPushMatrix();
-        transform.TransformTranslate(0.0f, -1.1f, 0.0f);
-        transform.TransformScale(0.15f, 1.3f, 0.15f);
+        transform.TransformTranslate(0.0f, -1.21f, 0.0f);
+        transform.TransformScale(0.15f, 2.53f, 0.15f);
         drawPart(poleColor);
     transform.TransformPopMatrix();
 
@@ -196,11 +193,8 @@ void Fan::Render()
         transform.TransformPushMatrix();
             transform.TransformTranslate(0.0f, 0.2f, 0.15f);
             transform.TransformRotate(glm::radians(spinAngle + i * spacingDeg), 0.0f, 0.0f, 1.0f);
-            
-            // Pushed further out (1.2f), made thinner (0.12f), and longer (1.1f)
-            transform.TransformTranslate(0.0f, 1.2f, 0.0f);
-            transform.TransformScale(0.12f, 1.1f, 0.05f);
-            
+            transform.TransformTranslate(0.0f, 0.55f, 0.0f);
+            transform.TransformScale(0.22f, 0.8f, 0.05f);
             drawPart(bladeColor[i]);
         transform.TransformPopMatrix();
     }
