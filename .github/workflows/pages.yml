@@ -1,0 +1,76 @@
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  pages: write
+  id-token: write
+  contents: read
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build-web:
+    name: Build WebGL demos
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Emscripten 3.1.64
+        uses: mymindstorm/setup-emsdk@v14
+        with:
+          version: "3.1.64"
+          actions-cache-folder: .emsdk-cache
+
+      - name: Create site directory
+        run: mkdir -p site
+
+      # Inject -s MIN_WEBGL_VERSION=2 at runtime so the GLSL ES 3.00 shader parser
+      # is used, without modifying any source files.
+      - name: Build Assignment-2-3DFan
+        continue-on-error: true
+        run: |
+          sed 's/-s USE_WEBGL2=1 \\/-s USE_WEBGL2=1 \\\n    -s MIN_WEBGL_VERSION=2 \\/' build_web.sh | bash
+          mkdir -p site/Assignment-2-3DFan
+          cp -r web/. site/Assignment-2-3DFan/
+
+      - name: Generate index.html
+        run: |
+          cat > site/index.html << 'HTML'
+          <!DOCTYPE html>
+          <html lang="en">
+          <head>
+            <meta charset="UTF-8">
+            <title>OpenGL ES 3.0 Modern — WebGL Demo</title>
+          </head>
+          <body>
+            <h1>Assignment 2 - 3D Fan</h1>
+            <p>An interactive WebGL demo that runs directly in your browser. No installation needed.</p>
+
+            <p><a href="Assignment-2-3DFan/">Launch the demo</a></p>
+          </body>
+          </html>
+          HTML
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: site/
+
+  deploy:
+    name: Deploy to GitHub Pages
+    needs: build-web
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

@@ -1,0 +1,70 @@
+name: Desktop
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: "Desktop • ${{ matrix.name }} • ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: ., name: Assignment-2-3DFan, os: ubuntu-latest  }
+          - { project: ., name: Assignment-2-3DFan, os: windows-latest }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ── Linux only ──────────────────────────────────────────────────────────
+      - name: Install OpenGL, X11 and Wayland headers (Linux)
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends \
+            libx11-dev libxrandr-dev libxinerama-dev \
+            libxcursor-dev libxi-dev libgl1-mesa-dev \
+            libwayland-dev wayland-protocols libxkbcommon-dev
+
+      - name: Cache FetchContent deps
+        uses: actions/cache@v4
+        with:
+          path: ${{ matrix.project }}/build_ci/_deps
+          key: cmake-deps-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles(format('{0}/cmake/ImportDependencies.cmake', matrix.project)) }}
+          restore-keys: cmake-deps-${{ runner.os }}-${{ matrix.name }}-
+
+      # ── Windows only ────────────────────────────────────────────────────────
+      # Load the MSVC environment (cl.exe, link.exe, etc.) directly and build
+      # with Ninja instead of asking CMake to generate a Visual Studio solution.
+      # The "Visual Studio 17 2022" generator depends on CMake locating an
+      # installed VS instance via vswhere, which has been flaky/missing on
+      # some windows-latest runner images ("could not find any instance of
+      # Visual Studio") even though the MSVC toolchain itself is present.
+      # Ninja + msvc-dev-cmd sidesteps that VS-instance discovery entirely.
+      - name: Setup MSVC environment (Windows)
+        if: runner.os == 'Windows'
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Ninja (Windows)
+        if: runner.os == 'Windows'
+        uses: seanmiddleditch/gha-setup-ninja@v4
+
+      # ── CMake configure ─────────────────────────────────────────────────────
+      - name: CMake configure (Linux)
+        if: runner.os == 'Linux'
+        working-directory: ${{ matrix.project }}
+        run: cmake -S . -B build_ci -DCMAKE_BUILD_TYPE=Release
+
+      - name: CMake configure (Windows)
+        if: runner.os == 'Windows'
+        working-directory: ${{ matrix.project }}
+        run: cmake -S . -B build_ci -G "Ninja" -DCMAKE_BUILD_TYPE=Release
+
+      # ── CMake build ─────────────────────────────────────────────────────────
+      - name: CMake build
+        working-directory: ${{ matrix.project }}
+        run: cmake --build build_ci --config Release --parallel

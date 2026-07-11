@@ -1,0 +1,72 @@
+name: Android
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  build:
+    name: "Android • ${{ matrix.name }}"
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { project: ., name: Assignment-2-3DFan }
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: android-actions/setup-android@v3
+
+      - name: Install NDK and CMake
+        run: |
+          sdkmanager "ndk;27.0.12077973" "cmake;3.22.1" --sdk_root="${ANDROID_HOME}"
+
+      # gradlew is not committed, so there is no wrapper script for
+      # setup-gradle's `gradle-version: wrapper` mode to introspect — it
+      # silently fell back to the runner's default Gradle (9.x) instead of
+      # this project's pinned version, and AGP 8.x is incompatible with
+      # Gradle 9.x internal API changes. Read the pinned version directly
+      # out of gradle-wrapper.properties ourselves and pass it explicitly.
+      - name: Read pinned Gradle version
+        id: gradle_ver
+        working-directory: ${{ matrix.project }}/android
+        run: |
+          VER=$(grep distributionUrl gradle/wrapper/gradle-wrapper.properties \
+            | sed -E 's/.*gradle-([0-9.]+)-.*/\1/')
+          if [ -z "$VER" ]; then
+            echo "Could not parse Gradle version from gradle-wrapper.properties" >&2
+            exit 1
+          fi
+          echo "Pinned Gradle version: $VER"
+          echo "version=$VER" >> "$GITHUB_OUTPUT"
+
+      - name: Setup Gradle (pinned to this project's wrapper version)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: ${{ steps.gradle_ver.outputs.version }}
+          build-root-directory: ${{ matrix.project }}/android
+          cache-read-only: false
+
+      - name: Write local.properties
+        working-directory: ${{ matrix.project }}/android
+        run: echo "sdk.dir=${ANDROID_HOME}" > local.properties
+
+      - name: assembleDebug
+        working-directory: ${{ matrix.project }}/android
+        run: gradle assembleDebug --no-daemon --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: apk-${{ matrix.name }}
+          path: ${{ matrix.project }}/android/app/build/outputs/apk/debug/*.apk
+          if-no-files-found: error
