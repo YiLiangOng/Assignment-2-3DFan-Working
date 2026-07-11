@@ -162,17 +162,19 @@ void Fan::Render()
     transform.TransformTranslate(0.0f, 0.8f, -8.0f);
     transform.TransformRotate(glm::radians(20.0f), 0.0f, 1.0f, 0.0f);
 
+    transform.TransformScale(0.75f, 0.75f, 0.75f);
+    
     // --- Base ----
     transform.TransformPushMatrix();
         transform.TransformTranslate(0.0f, -2.6f, 0.0f);
-        transform.TransformScale(1.6f, 0.25f, 0.8f);
+        transform.TransformScale(1.3f, 0.18f, 0.60f);
         drawPart(baseColor);
     transform.TransformPopMatrix();
 
     // --- Pole -------
     transform.TransformPushMatrix();
-        transform.TransformTranslate(0.0f, -1.21f, 0.0f);
-        transform.TransformScale(0.15f, 2.53f, 0.15f);
+        transform.TransformTranslate(0.0f, -1.45f, 0.0f);
+        transform.TransformScale(0.10f, 1.95f, 0.10f);
         drawPart(poleColor);
     transform.TransformPopMatrix();
 
@@ -193,8 +195,8 @@ void Fan::Render()
         transform.TransformPushMatrix();
             transform.TransformTranslate(0.0f, 0.2f, 0.15f);
             transform.TransformRotate(glm::radians(spinAngle + i * spacingDeg), 0.0f, 0.0f, 1.0f);
-            transform.TransformTranslate(0.0f, 0.55f, 0.0f);
-            transform.TransformScale(0.22f, 0.8f, 0.05f);
+            transform.TransformTranslate(0.0f, 0.70f, 0.0f);
+            transform.TransformScale(0.12f, 1.15f, 0.05f);
             drawPart(bladeColor[i]);
         transform.TransformPopMatrix();
     }
