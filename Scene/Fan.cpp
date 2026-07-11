@@ -180,8 +180,7 @@ void Fan::Render()
     // --- Hub --
     transform.TransformPushMatrix();
         transform.TransformTranslate(0.0f, 0.2f, 0.0f);
-        // Shrink the scale from 0.3f down to 0.15f to make it less noticeable
-        transform.TransformScale(0.15f, 0.15f, 0.15f); 
+        transform.TransformScale(0.2f, 0.2f, 0.2f); 
         drawPart(hubColor);
     transform.TransformPopMatrix();
 
