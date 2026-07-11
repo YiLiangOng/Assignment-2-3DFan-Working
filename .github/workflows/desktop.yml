@@ -30,13 +30,6 @@ jobs:
             libxcursor-dev libxi-dev libgl1-mesa-dev \
             libwayland-dev libwayland-bin wayland-protocols libxkbcommon-dev
 
-      - name: Cache FetchContent deps
-        uses: actions/cache@v4
-        with:
-          path: ${{ matrix.project }}/build_ci/_deps
-          key: cmake-deps-${{ runner.os }}-${{ matrix.name }}-${{ hashFiles(format('{0}/cmake/ImportDependencies.cmake', matrix.project)) }}
-          restore-keys: cmake-deps-${{ runner.os }}-${{ matrix.name }}-
-
       # ── Windows only ────────────────────────────────────────────────────────
       # Load the MSVC environment (cl.exe, link.exe, etc.) directly and build
       # with Ninja instead of asking CMake to generate a Visual Studio solution.
