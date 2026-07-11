@@ -1,6 +1,7 @@
 # --- Desktop (CMake) --------------------------------------------------
 build/
 build_desktop/
+build_ci/
 CMakeCache.txt
 CMakeFiles/
 

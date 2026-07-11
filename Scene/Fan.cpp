@@ -1,7 +1,38 @@
 /**
  * Fan.cpp
- * 
- * Implements the 3D Fan model geometry, animation, and touch gestures.
+ *
+ * See Fan.h for the part hierarchy diagram, gesture summary, and stretch
+ * goals implemented (fling-with-decay + long-press blade count toggle).
+ *
+ * PART 1 -- geometry & static scene graph
+ * ----------------------------------------------------------------------
+ * The cube is 8 unique corners / 36 indices (Chapter 2 tutorial 3 style).
+ * InitModel() uploads it ONCE, following the Chapter 3 tutorial 1
+ * sub-region VBO pattern -- a single glBufferData(nullptr) allocation
+ * followed by two glBufferSubData calls (24 position floats, then 8
+ * per-corner grayscale "shade" floats) -- and records the attribute
+ * layout plus the index buffer into one VAO (Chapter 3 tutorial 4), so
+ * Render() only needs a single glBindVertexArray() per part.
+ *
+ * Render() draws that one cube 3 + bladeCount times -- base, pole, hub,
+ * and bladeCount blades -- each with its own model matrix built on the
+ * provided Transform push/pop stack (parent-first, post-multiplying,
+ * exactly like legacy glTranslatef/glRotatef) and its own PARTCOLOR
+ * uniform. No per-part vertex data and no manual matrix math exist
+ * anywhere here.
+ *
+ * PART 2 -- animation
+ * ----------------------------------------------------------------------
+ * spinAngle advances once per frame at the top of Render() and feeds the
+ * TransformRotate() call inside the blade push/pop block only, so the
+ * base/pole/hub stay motionless while the blades spin together.
+ *
+ * PARTS 3 & 4 -- gestures, plus the two stretch goals
+ * ----------------------------------------------------------------------
+ * TouchEventDown/Move/Release implement tap-vs-swipe detection and the
+ * velocity-based speed boost described in Fan.h, plus a hold-duration
+ * check that upgrades a stationary "tap" into a "long press" (blade
+ * count toggle) once it has been held for kLongPressMs.
  */
 
 #include "Fan.h"
@@ -55,7 +86,7 @@ Fan::~Fan()
 // --- Geometry Setup ----
 void Fan::createCube()
 {
-    const GLsizeiptr posSize   = sizeof(kPositions); 
+    const GLsizeiptr posSize   = sizeof(kPositions);
     const GLsizeiptr shadeSize = sizeof(kShades);
 
     glGenBuffers(1, &vbo);
@@ -102,6 +133,7 @@ void Fan::InitModel()
     transform.TransformLoadIdentity();
 
     lastMoveTime = std::chrono::steady_clock::now();
+    touchDownTime = lastMoveTime;
 }
 
 void Fan::Resize(int w, int h)
@@ -130,6 +162,14 @@ void Fan::Render()
     if (fanOn) spinAngle += kBaseSpeed + dragBoost;
     if (spinAngle >= 360.0f) spinAngle -= 360.0f;
 
+    // Stretch goal (fling with decay): once the finger/mouse is up, the
+    // boost is no longer refreshed by TouchEventMove, so wind it down
+    // gradually instead of the base spec's instant snap back to 0.
+    if (!isDragging && dragBoost > 0.0f) {
+        dragBoost *= kDragDecay;
+        if (dragBoost < 0.01f) dragBoost = 0.0f;
+    }
+
     glEnable(GL_DEPTH_TEST);
     glUseProgram(program);
     glBindVertexArray(vao);
@@ -137,11 +177,12 @@ void Fan::Render()
     static const glm::vec3 baseColor(0.45f, 0.28f, 0.12f);
     static const glm::vec3 poleColor(0.55f, 0.55f, 0.58f);
     static const glm::vec3 hubColor (0.20f, 0.20f, 0.22f);
-    static const glm::vec3 bladeColor[4] = {
+    static const glm::vec3 bladeColor[kMaxBladeCount] = {
         glm::vec3(0.85f, 0.10f, 0.10f),  // 0: red
         glm::vec3(0.15f, 0.35f, 0.85f),  // 1: blue
         glm::vec3(0.90f, 0.50f, 0.05f),  // 2: orange
         glm::vec3(0.15f, 0.70f, 0.20f),  // 3: green
+        glm::vec3(0.65f, 0.20f, 0.75f),  // 4: purple (only used when bladeCount == 5)
     };
 
     transform.TransformSetMatrixMode(MODEL_MATRIX);
@@ -165,19 +206,23 @@ void Fan::Render()
         drawPart(poleColor);
     transform.TransformPopMatrix();
 
-    // --- Hub --
+    // --- Hub (stays still -- only the blades below rotate) --
     transform.TransformPushMatrix();
-        transform.TransformTranslate(0.0f, 0.2f, 0.15f);
-        transform.TransformRotate(glm::radians(spinAngle), 0.0f, 0.0f, 1.0f);
-        transform.TransformScale(0.22f, 0.22f, 0.08f);
+        transform.TransformTranslate(0.0f, 0.2f, 0.0f);
+        transform.TransformScale(0.3f, 0.3f, 0.3f);
         drawPart(hubColor);
     transform.TransformPopMatrix();
 
-    // --- Four Blades (spaced 90 degrees apart) ---
-    for (int i = 0; i < 4; ++i) {
+    // --- Blades, evenly spaced around the hub's Z axis -----------------
+    // Stretch goal (blade count toggle): bladeCount is 3, 4, or 5 --
+    // cycled by a long press in TouchEventRelease -- and the spacing
+    // below (360/bladeCount) re-derives itself every frame, so no extra
+    // geometry or shader work is needed to support the change.
+    const float spacingDeg = 360.0f / static_cast<float>(bladeCount);
+    for (int i = 0; i < bladeCount; ++i) {
         transform.TransformPushMatrix();
             transform.TransformTranslate(0.0f, 0.2f, 0.15f);
-            transform.TransformRotate(glm::radians(spinAngle + i * 90.0f), 0.0f, 0.0f, 1.0f);
+            transform.TransformRotate(glm::radians(spinAngle + i * spacingDeg), 0.0f, 0.0f, 1.0f);
             transform.TransformTranslate(0.0f, 0.55f, 0.0f);
             transform.TransformScale(0.22f, 0.8f, 0.05f);
             drawPart(bladeColor[i]);
@@ -193,14 +238,18 @@ void Fan::TouchEventDown(float x, float y)
     lastX = x;
     lastY = y;
     movedDistance = 0.0f;
-    lastMoveTime = std::chrono::steady_clock::now();
+    isDragging = true;
+
+    const auto now = std::chrono::steady_clock::now();
+    touchDownTime = now;
+    lastMoveTime  = now;
 }
 
 void Fan::TouchEventMove(float x, float y)
 {
     const float dx   = x - lastX;
     const float dy   = y - lastY;
-    const float dist = std::sqrt(dx * dx + dy * dy);   // pixels event
+    const float dist = std::sqrt(dx * dx + dy * dy);   // pixels this event
     movedDistance += dist;
 
     const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
@@ -217,9 +266,25 @@ void Fan::TouchEventMove(float x, float y)
 
 void Fan::TouchEventRelease(float /*x*/, float /*y*/)
 {
+    isDragging = false;
+
     if (movedDistance < kTapThreshold) {
-        fanOn = !fanOn;
-        LOGI("Fan %s", fanOn ? "ON" : "OFF");
+        // Stationary release: a quick tap toggles the fan; holding it
+        // for kLongPressMs or more instead cycles the blade count
+        // (stretch goal). Either way there is no meaningful fling to
+        // preserve, so the boost is cleared immediately.
+        const float holdMs = std::chrono::duration<float, std::milli>(
+            std::chrono::steady_clock::now() - touchDownTime).count();
+
+        if (holdMs >= kLongPressMs) {
+            bladeCount = (bladeCount >= kMaxBladeCount) ? kMinBladeCount : bladeCount + 1;
+            LOGI("Blade count: %d", bladeCount);
+        } else {
+            fanOn = !fanOn;
+            LOGI("Fan %s", fanOn ? "ON" : "OFF");
+        }
+        dragBoost = 0.0f;
     }
-    dragBoost = 0.0f;   // boost applies only while dragging
+    // else: a real drag just ended. dragBoost is left as-is; Render()
+    // winds it down via kDragDecay instead of snapping it to 0.
 }

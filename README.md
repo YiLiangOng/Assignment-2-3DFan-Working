@@ -1,9 +1,6 @@
 # Assignment 2 -- "3D Fan"
 
-A hierarchical 3D table fan (base, pole, hub, four spinning blades) built
-from a single shared cube, rendered with OpenGL ES 3.0 on **Android**,
-**Windows desktop**, and **WebGL**, from one shared C++ code base in
-`Scene/`.
+This is a 3D fan with a base, pole, hub, and four blades. It is made out of one shared cube. It works on Android, Windows, and WebGL using OpenGL ES 3.0. The C++ code is shared in the `Scene/` folder.
 
 - Tap / click: toggle the fan **ON** / **OFF** (logged as `Fan ON` / `Fan OFF`)
 - Drag / swipe: spin the fan faster, proportional to swipe speed; release to
@@ -15,18 +12,23 @@ explanation of the part hierarchy and gesture logic.
 ## Project layout
 
 ```
-CMakeLists.txt              <- Desktop (PC) entry point (GLFW + GLEW + GLM)
-script_build_and_run.bat    <- Desktop convenience wrapper
-build_web.sh / build_web.bat<- Web entry point (Emscripten)
+CMakeLists.txt                  <- Desktop entry point (GLFW + GLEW + GLM)
+script_build_and_run.bat        <- Desktop convenience wrapper
+build_web.sh / build_web.bat    <- Web entry point (Emscripten)
 cmake/ImportDependencies.cmake
-Scene/                      <- shared by ALL THREE platforms
+.github/workflows/
+  desktop.yml                   <- builds the desktop target (Linux + Windows)
+  android.yml                   <- builds the Android debug APK
+  pages.yml                     <- builds the web target, deploys to GitHub Pages
+Scene/                          <- shared by ALL THREE platforms
   Platform.h, Model.h, Renderer.h/.cpp, ShaderHelper.h
-  Transform.h/.cpp          <- provided, unmodified matrix stack
-  Fan.h/.cpp                <- the assignment implementation
-  main.cpp                  <- Desktop/Web entry point + mouse->touch mapping
-android/                    <- Android Studio / Gradle project
+  Transform.h/.cpp              <- provided, unmodified matrix stack
+  Fan.h/.cpp                    <- the assignment implementation
+  main.cpp                      <- Desktop/Web entry point + mouse->touch mapping
+android/                        <- Android Studio / Gradle project
   app/src/main/assets/shader/FanVertex.glsl, FanFragment.glsl
 ```
+
 
 ---
 
@@ -75,15 +77,19 @@ the SDK Manager.
 3. Press **Run** with a connected device or emulator (API 34+, OpenGL ES
    3.0 capable).
 
-**Or from the command line:**
+**Or from the command line** (requires a system-installed Gradle matching
+`android/gradle/wrapper/gradle-wrapper.properties` -- this repo does not
+commit the `gradlew` wrapper binaries; see `.github/workflows/android.yml`
+for the exact CI equivalent):
 
 ```bash
 cd android
-./gradlew installDebug
+gradle assembleDebug
 ```
 
-Output: `android/app/build/outputs/apk/debug/app-debug.apk`, installed and
-launched on the connected device/emulator. Logs: `adb logcat -s Fan3D`.
+Output: `android/app/build/outputs/apk/debug/app-debug.apk`. Install with
+`adb install -r app/build/outputs/apk/debug/app-debug.apk` or run it
+directly from Android Studio. Logs: `adb logcat -s Fan3D`.
 
 ---
 
