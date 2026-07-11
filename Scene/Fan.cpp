@@ -1,38 +1,9 @@
 /**
  * Fan.cpp
  *
- * See Fan.h for the part hierarchy diagram, gesture summary, and stretch
- * goals implemented (fling-with-decay + long-press blade count toggle).
- *
- * PART 1 -- geometry & static scene graph
- * ----------------------------------------------------------------------
- * The cube is 8 unique corners / 36 indices (Chapter 2 tutorial 3 style).
- * InitModel() uploads it ONCE, following the Chapter 3 tutorial 1
- * sub-region VBO pattern -- a single glBufferData(nullptr) allocation
- * followed by two glBufferSubData calls (24 position floats, then 8
- * per-corner grayscale "shade" floats) -- and records the attribute
- * layout plus the index buffer into one VAO (Chapter 3 tutorial 4), so
- * Render() only needs a single glBindVertexArray() per part.
- *
- * Render() draws that one cube 3 + bladeCount times -- base, pole, hub,
- * and bladeCount blades -- each with its own model matrix built on the
- * provided Transform push/pop stack (parent-first, post-multiplying,
- * exactly like legacy glTranslatef/glRotatef) and its own PARTCOLOR
- * uniform. No per-part vertex data and no manual matrix math exist
- * anywhere here.
- *
- * PART 2 -- animation
- * ----------------------------------------------------------------------
- * spinAngle advances once per frame at the top of Render() and feeds the
- * TransformRotate() call inside the blade push/pop block only, so the
- * base/pole/hub stay motionless while the blades spin together.
- *
- * PARTS 3 & 4 -- gestures, plus the two stretch goals
- * ----------------------------------------------------------------------
- * TouchEventDown/Move/Release implement tap-vs-swipe detection and the
- * velocity-based speed boost described in Fan.h, plus a hold-duration
- * check that upgrades a stationary "tap" into a "long press" (blade
- * count toggle) once it has been held for kLongPressMs.
+ * Implements the 3D Fan model. Handles the creation of the shared cube
+ * geometry, hierarchical rendering of the fan parts (base, pole, hub, blades),
+ * animation, and touch gestures (tap, drag, fling-decay, and long-press).
  */
 
 #include "Fan.h"
@@ -162,10 +133,12 @@ void Fan::Render()
     if (fanOn) spinAngle += kBaseSpeed + dragBoost;
     if (spinAngle >= 360.0f) spinAngle -= 360.0f;
 
-    // Stretch goal (fling with decay): once the finger/mouse is up, the
-    // boost is no longer refreshed by TouchEventMove, so wind it down
-    // gradually instead of the base spec's instant snap back to 0.
-    if (!isDragging && dragBoost > 0.0f) {
+    // Check if the mouse has stopped moving or left the window
+    const std::chrono::steady_clock::time_point now = std::chrono::steady_clock::now();
+    float msSinceMove = std::chrono::duration<float, std::milli>(now - lastMoveTime).count();
+
+    // Decay the boost if the mouse was released OR if it hasn't moved recently
+    if ((!isDragging || msSinceMove > 100.0f) && dragBoost > 0.0f) {
         dragBoost *= kDragDecay;
         if (dragBoost < 0.01f) dragBoost = 0.0f;
     }
@@ -191,6 +164,7 @@ void Fan::Render()
     // Pull the fan back into the scene and tilt it
     transform.TransformTranslate(0.0f, 0.8f, -8.0f);
     transform.TransformRotate(glm::radians(20.0f), 0.0f, 1.0f, 0.0f);
+    transform.TransformScale(0.6f, 0.6f, 0.6f);
 
     // --- Base ----
     transform.TransformPushMatrix();
@@ -206,18 +180,17 @@ void Fan::Render()
         drawPart(poleColor);
     transform.TransformPopMatrix();
 
-    // --- Hub (stays still -- only the blades below rotate) --
+    // --- Hub --
     transform.TransformPushMatrix();
         transform.TransformTranslate(0.0f, 0.2f, 0.0f);
-        transform.TransformScale(0.3f, 0.3f, 0.3f);
+        // Shrink the scale from 0.3f down to 0.15f to make it less noticeable
+        transform.TransformScale(0.15f, 0.15f, 0.15f); 
         drawPart(hubColor);
     transform.TransformPopMatrix();
 
-    // --- Blades, evenly spaced around the hub's Z axis -----------------
-    // Stretch goal (blade count toggle): bladeCount is 3, 4, or 5 --
-    // cycled by a long press in TouchEventRelease -- and the spacing
-    // below (360/bladeCount) re-derives itself every frame, so no extra
-    // geometry or shader work is needed to support the change.
+    // --- Blades, evenly spaced around the hub's Z axis (with bonus) -----------------
+    // bladeCount is 3, 4, or 5
+    // cycled by a long press in TouchEventRelease
     const float spacingDeg = 360.0f / static_cast<float>(bladeCount);
     for (int i = 0; i < bladeCount; ++i) {
         transform.TransformPushMatrix();
